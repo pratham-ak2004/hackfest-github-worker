@@ -44,6 +44,10 @@ class Settings:
     
     REDIS_URL = get_env.__func__("REDIS_URL", f"redis://{REDIS_USERNAME + ':' if REDIS_USERNAME else ''}{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
     
+    HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
+    GITHUB_ORG_TOKEN = get_env.__func__("GITHUB_ORG_TOKEN", None, required=True)
+    GITHUB_INVITE_TOKEN = get_env.__func__("GITHUB_INVITE_TOKEN", None, required=True)
+    
     APPLICATION_NAME = "hackfest-github"
     EVENT_QUEUE = "events"
     
