@@ -1,6 +1,7 @@
 from config.setttings import settings
 from email.utils import parsedate_to_datetime
-from utils.typing import HttpMethod, GithubMetaData
+from utils.typing import HttpMethod, GithubMetaData, GithubTeam, GithubRepository, GithubInvitation
+from typing import Optional
 
 import requests, time
 
@@ -38,6 +39,23 @@ class GithubClient:
         response = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, json=payload)
         self._update_rate_limit(response)
         return response
+    
+    # TODO: Implement request and caching
+    def _get_headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-Github-Api-Version": self._github_api_version
+        }
+        
+    def _get_user_id(self, username: str) -> int:
+        return 0
+    
+    def generate_team_name(self, team_no: int, team_name: Optional[str]) -> str:
+        return f"HF{self.year}-T{team_no:02d}{f'-{team_name}' if team_name else ''}"
+    
+    def generate_repo_name(self, team_no: int) -> str:
+        return f"HF{self.year}-{team_no:02d}"
         
     def get_rate_limit_info(self) -> GithubMetaData:
         """Get the current rate limit information"""
@@ -61,10 +79,84 @@ class GithubClient:
         
     def rate_limit(self) -> requests.Response:
         """Fetch the current rate limit status from GitHub API"""
+        
         route = "/rate_limit"
-        headers = {
-            "Authorization": f"token {self.token}",
-            "Accept": "application/vnd.github+json",
-            "X-Github-Api-Version": self._github_api_version
+        headers = self._get_headers()
+        response = self._make_request(route, HttpMethod.GET, headers)
+        response.raise_for_status()
+        return response.json()
+    
+    def create_org_team(self,team_no: int, team_name: Optional[str] = None) -> GithubTeam:
+        """Create a new team in the organization for the specified team number and name
+        
+        - `Note`: the team is `closed` by default, meaning everyone in the organization can view this team.
+        - `Hack`: Use `secret` to make it visible only to ORG owners and team members.
+        """
+        
+        payload = {
+            "name": self.generate_team_name(team_no, team_name),
+            "description": f"Hackfest{self.year} team for T{team_no:02d}{f' {team_name}' if team_name else ''}",
+            "privacy": "closed"
         }
-        return self._make_request(route, HttpMethod.GET, headers)
+        headers = self._get_headers()
+        
+        response = self._make_request(f"/orgs/{self.org_name}/teams", HttpMethod.POST, headers, payload)
+        response.raise_for_status()
+        data = response.json()
+        
+        return GithubTeam(
+            id=data["id"],
+            name=data["name"],
+            slug=data["slug"],
+            url=data["url"],
+            html_url=data["html_url"]
+        )
+    
+    def create_team_repo(self, team_id: int, team_no: int) -> GithubRepository:
+        """Create a new repository for the specified Team"""
+        
+        payload = {
+            "name": self.generate_repo_name(team_no),
+            "description": f"Hackfest{self.year} repository for T{team_no:02d}",
+            "private": True,
+            "team_id": team_id
+        }
+        headers = self._get_headers()
+        
+        response = self._make_request(f"/orgs/{self.org_name}/repos", HttpMethod.POST, headers, payload)
+        response.raise_for_status()
+        data = response.json()
+        
+        return GithubRepository(
+            id=data["id"],
+            name=data["name"],
+            full_name=data["full_name"],
+            url=data["url"],
+            html_url=data["html_url"]
+        )
+        
+    def send_team_invite(self, team_ids: list[int], username: str, email: Optional[str], user_id: Optional[int]) -> GithubInvitation:
+        """Send an invite to the specified user to join the team"""
+        
+        if email is None:
+            if user_id is None:
+                user_id = self._get_user_id(username)
+        
+        payload = {
+            "email": email,
+            "invitee_id": user_id,
+            "role": "direct_member",
+            "team_ids": team_ids        
+        }
+        headers = self._get_headers()
+        
+        response = self._make_request(f"/orgs/{self.org_name}/invitations", HttpMethod.POST, headers, payload)
+        response.raise_for_status()
+        data = response.json()
+        
+        return GithubInvitation(
+            id=data["id"],
+            email=data["email"],
+            created_at=data["created_at"],
+            invitation_teams_url=data["invitation_teams_url"]
+        )
