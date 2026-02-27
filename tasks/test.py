@@ -1,8 +1,8 @@
 from . import BaseEventTask
 
 class TestTask(BaseEventTask):
-    name = "test_task"
+    name = "tasks.test.TestTask"
     
     def process(self, event: dict) -> dict:
-        self.logger.debug(f"Processing event in {self.name}: {event}")
+        self.logger.info(f"Processing event in {self.name}: {event}")
         return {"status": "success", "processed_event": event}

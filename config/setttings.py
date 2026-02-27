@@ -33,22 +33,23 @@ class Settings:
     
     RABBITMQ_HOST = get_env.__func__("RABBITMQ_HOST", "localhost")
     RABBITMQ_PORT = int(get_env.__func__("RABBITMQ_PORT", "5672"))
-    RABBITMQ_PASSWORD = get_env.__func__("RABBITMQ_PASSWORD", "guest")
+    RABBITMQ_PASSWORD = get_env.__func__("RABBITMQ_PASSWORD", "password")
     RABBITMQ_USERNAME = get_env.__func__("RABBITMQ_USERNAME", "guest")
     
-    REDIS_HOST = get_env.__func__("REDIS_HOST", "localhost")
-    REDIS_PORT = int(get_env.__func__("REDIS_PORT", "6379"))
-    REDIS_PASSWORD = get_env.__func__("REDIS_PASSWORD", "000000")
-    REDIS_DB = int(get_env.__func__("REDIS_DB", "0"))
-    REDIS_USERNAME = get_env.__func__("REDIS_USERNAME", None)
+    DB_USER = get_env.__func__("DB_USER", "postgres")
+    DB_PASSWORD = get_env.__func__("DB_PASSWORD", "password")
+    DB_HOST = get_env.__func__("DB_HOST", "localhost")
+    DB_PORT = int(get_env.__func__("DB_PORT", "5432"))
+    DB_NAME = get_env.__func__("DB_NAME", "postgres")
     
-    REDIS_URL = get_env.__func__("REDIS_URL", f"redis://{REDIS_USERNAME + ':' if REDIS_USERNAME else ''}{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}")
+    DB_URL = get_env.__func__("DB_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
     
     HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
     GITHUB_ORG_TOKEN = get_env.__func__("GITHUB_ORG_TOKEN", None, required=True)
     GITHUB_INVITE_TOKEN = get_env.__func__("GITHUB_INVITE_TOKEN", None, required=True)
     
     APPLICATION_NAME = "hackfest-github"
+    LOG_LEVEL = "INFO"
     EVENT_QUEUE = "events"
     
 settings = Settings()

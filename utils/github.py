@@ -1,4 +1,4 @@
-from config.setttings import settings
+from config.settings import settings
 from email.utils import parsedate_to_datetime
 from utils.typing import HttpMethod, GithubMetaData, GithubTeam, GithubRepository, GithubInvitation
 from typing import Optional

@@ -1,7 +1,7 @@
-from .settings import settings
+from . import settings
 
 broker_url = f"amqp://{settings.RABBITMQ_USERNAME}:{settings.RABBITMQ_PASSWORD}@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}/"
-result_backend = f"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+result_backend = f"db+postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 
 task_serializer = 'json'
 accept_content = ['json']
@@ -10,7 +10,8 @@ timezone = 'Asia/Kolkata'
 enable_utc = True
 
 result_persistent = True
-result_expires = 3600
+result_expires = 0
+result_extended = True
 
 worker_hijack_root_logger = False
 worker_prefetch_multiplier = 1

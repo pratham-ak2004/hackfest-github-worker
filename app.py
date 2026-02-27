@@ -8,7 +8,7 @@ logger.info("Starting in WORKER mode - will process tasks from queue")
 def start_celery_worker():
     """Start Celery worker"""
     logger.info("Starting Celery worker...")
-    argv = ['worker', '--loglevel=error']
+    argv = ['worker']
     app.worker_main(argv)
     
 def start_flower():

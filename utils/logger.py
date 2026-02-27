@@ -1,6 +1,6 @@
 import logging
 import sys
-from config.settings import settings
+from config import settings
 
 class ColoredFormatter(logging.Formatter):
     """Custom formatter with colors for different log levels"""
