@@ -8,6 +8,7 @@ accept_content = ['json']
 result_serializer = 'json'
 timezone = 'Asia/Kolkata'
 enable_utc = True
+queue = settings.EVENT_QUEUE
 
 result_persistent = True
 result_expires = 0

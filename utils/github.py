@@ -1,6 +1,6 @@
-from config.settings import settings
+from config import settings
 from email.utils import parsedate_to_datetime
-from utils.typing import HttpMethod, GithubMetaData, GithubTeam, GithubRepository, GithubInvitation
+from utils.schema import HttpMethod, GithubMetaData, GithubTeam, GithubRepository, GithubInvitation
 from typing import Optional
 
 import requests, time
@@ -160,3 +160,5 @@ class GithubClient:
             created_at=data["created_at"],
             invitation_teams_url=data["invitation_teams_url"]
         )
+        
+orgClient = GithubClient(token=settings.GITHUB_ORG_TOKEN)
