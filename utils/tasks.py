@@ -1,9 +1,11 @@
-import pika
+import pika, smtplib, email, os
 from config import settings
 from utils.logger import get_logger
 from utils.schema import TeamPayload, Payload
 from tasks.pipeline.stages.invite import SendOrgInviteTask
-from uuid import uuid7
+from uuid import uuid7 ## using uuid7 for better db indexing performance
+from email.message import EmailMessage
+from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
 
 logger = get_logger(__name__)
 
@@ -44,8 +46,43 @@ class TaskClient:
         payload = Payload(data=member_payload)
         self._send_task("task.pipeline.send_invite_notification", payload)
         
-    def send_invite_notification(self) -> None:
-        raise NotImplementedError("Invite notification logic not implemented yet")
+    
+class MailerClient:        
+    def __init__(self):
+        self.smtp_session = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
+        self.smtp_session.starttls()
+        self.smtp_session.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        
+        self.template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(self.template_dir),
+            autoescape=select_autoescape(["html", "xml"])
+        )
+        
+        self.templates = dict()
+        template_list = ["invite"]
+        for template_name in template_list:
+            self.templates[template_name] = self.jinja_env.get_template(f"{template_name}.html")
+        
+    def _send_mail(self, to_email: str, subject: str, body: str) -> None:
+        message = EmailMessage()
+        
+        message["From"] = settings.SMTP_USER
+        message["To"] = to_email
+        message["Subject"] = subject
+        message.set_content(body, subtype="html")
+        
+        self.smtp_session.send_message(message)
+        
+    def send_invite_notification(self, to_email: str, subject: str, repository_url: str, repository_name: str) -> None:
+        template = self.templates["invite"]
+        html_content = template.render(
+            subject=subject,
+            repository_url=repository_url,
+            repository_name=repository_name
+        )
+        self._send_mail(to_email=to_email, subject=subject, body=html_content)
         
 
 taskClient = TaskClient()
+mailerClient = MailerClient()

@@ -1,12 +1,14 @@
 from tasks.base import BaseEventTask
+from utils.schema import TaskResponse
 from utils.logger import get_logger
+from utils.tasks import mailerClient
 from .invite import SendOrgInviteTask
+
 
 logger = get_logger(__name__)
 
 class SendInviteNotificationTask(BaseEventTask):
     name = "task.pipeline.send_invite_notification"
-    invite_list_homepage_url = "https://github.com/settings/organizations"
     
     class TaskPayload(SendOrgInviteTask.TaskPayload):
         pass
@@ -21,13 +23,17 @@ class SendInviteNotificationTask(BaseEventTask):
     
     def process(self, event) -> dict:
         logger.info(f"Sending notification to {self.payload.data.member.name}")
+
+        mailerClient.send_invite_notification(
+            to_email=self.payload.data.member.email,
+            subject=f"You've been invited to join Hackfest Organization on GitHub",
+            repository_name=self.payload.data.team.github_repo.name,
+            repository_url=self.payload.data.team.github_repo.html_url
+        )
         
-        # TODO: implement actual notification logic
-        raise NotImplementedError("Notification logic not implemented yet")
-        
-        # logger.info(f"Invite notification sent to {self.payload.data.member.name}")
-        # return {
-        #     "success": True,
-        #     "message": "Notification sent successfully",
-        #     "payload": event
-        # }
+        logger.info(f"Invite notification sent to {self.payload.data.member.name}")
+        return TaskResponse(
+            success=True,
+            message=f"Invite notification sent to {self.payload.data.member.name}.",
+            payload=self.payload.model_dump()
+        )

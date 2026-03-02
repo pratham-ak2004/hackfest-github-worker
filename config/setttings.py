@@ -44,12 +44,17 @@ class Settings:
     
     DB_URL = get_env.__func__("DB_URL", f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
     
+    SMTP_HOST = get_env.__func__("SMTP_HOST", None, required=True)
+    SMTP_PORT = int(get_env.__func__("SMTP_PORT", None, required=True))
+    SMTP_USER = get_env.__func__("SMTP_USER", None, required=True)
+    SMTP_PASSWORD = get_env.__func__("SMTP_PASSWORD", None, required=True)
+    
     HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
     GITHUB_ORG_TOKEN = get_env.__func__("GITHUB_ORG_TOKEN", None, required=True)
     GITHUB_INVITE_TOKEN = get_env.__func__("GITHUB_INVITE_TOKEN", None, required=True)
     
     APPLICATION_NAME = "hackfest-github"
-    LOG_LEVEL = "INFO"
+    LOG_LEVEL = get_env.__func__("LOG_LEVEL", "INFO")
     EVENT_QUEUE = "events"
     
 settings = Settings()
