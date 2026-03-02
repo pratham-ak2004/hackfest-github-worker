@@ -2,6 +2,7 @@ import pika
 from config import settings
 from utils.logger import get_logger
 from utils.schema import TeamPayload, Payload
+from tasks.pipeline.stages.invite import SendOrgInviteTask
 from uuid import uuid7
 
 logger = get_logger(__name__)
@@ -34,6 +35,17 @@ class TaskClient:
     def create_repo_task(self, team_payload: TeamPayload) -> None:
         payload = Payload(data=team_payload)
         self._send_task("task.pipeline.create_repo", payload)
+        
+    def create_invite_task(self, member_payload: SendOrgInviteTask.TaskPayload.DataModel) -> None:
+        payload = Payload(data=member_payload)
+        self._send_task("task.pipeline.send_invite", payload)
+        
+    def create_invite_notification_task(self, member_payload: SendOrgInviteTask.TaskPayload.DataModel) -> None:
+        payload = Payload(data=member_payload)
+        self._send_task("task.pipeline.send_invite_notification", payload)
+        
+    def send_invite_notification(self) -> None:
+        raise NotImplementedError("Invite notification logic not implemented yet")
         
 
 taskClient = TaskClient()

@@ -1,6 +1,7 @@
 from utils.logger import get_logger
 from abc import ABC, abstractmethod
 from celery import Task
+from utils.schema import TaskResponse
 
 lg = get_logger(__name__)
 
@@ -19,7 +20,7 @@ class BaseEventTask(Task, ABC):
         self.logger.debug(f"Initialized task: {self.name}")
     
     @abstractmethod
-    def process(self, event: dict) -> dict:
+    def process(self, event: dict) -> TaskResponse:
         """Implement task logic here"""
         pass
     

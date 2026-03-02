@@ -15,7 +15,11 @@ class TimeMeta(BaseModel):
     timestamp: int
     readable: str
 
-
+class GithubUserCredential(BaseModel):
+    access_token: str
+    refresh_token: str
+    
+    
 class GithubMetaData(BaseModel):
     limit: int
     remaining: int
@@ -53,15 +57,25 @@ class TeamMember(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
     github_invite: Optional[GithubInvitation] = None
+    credential: Optional[GithubUserCredential] = None
 
 
-class TeamPayload(BaseModel):
+class TeamDetails(BaseModel):
     team_no: int
     team_name: Optional[str] = None
-    members: list[TeamMember] = []
-    
     github_team: Optional[GithubTeam] = None
     github_repo: Optional[GithubRepository] = None
+
+
+class TeamPayload(TeamDetails):
+    members: list[TeamMember] = []
     
+
 class Payload(BaseModel):
     data: any
+    
+    
+class TaskResponse(BaseModel):
+    success: bool
+    message: str
+    payload: Optional[dict] = None

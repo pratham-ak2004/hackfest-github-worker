@@ -162,3 +162,4 @@ class GithubClient:
         )
         
 orgClient = GithubClient(token=settings.GITHUB_ORG_TOKEN)
+inviteClient = GithubClient(token=settings.GITHUB_INVITE_TOKEN)

@@ -1,4 +1,6 @@
-from tasks.pipeline.stages.team import CreateTeamTask
-from tasks.pipeline.stages.repo import CreateRepoTask
+from .team import CreateTeamTask
+from .repo import CreateRepoTask
+from .invite import SendOrgInviteTask
+from .notification import SendInviteNotificationTask
 
-__all__ = ["CreateTeamTask", "CreateRepoTask"]
+__all__ = ["CreateTeamTask", "CreateRepoTask", "SendOrgInviteTask", "SendInviteNotificationTask"]

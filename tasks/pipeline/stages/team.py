@@ -1,5 +1,5 @@
 from tasks import BaseEventTask
-from utils.schema import Payload, TeamPayload
+from utils.schema import Payload, TeamPayload, TaskResponse
 from utils.github import orgClient
 from utils.tasks import taskClient
 from utils.logger import get_logger
@@ -20,7 +20,7 @@ class CreateTeamTask(BaseEventTask):
             logger.error(f"Validation error: {e}")
             return False
     
-    def process(self, event):
+    def process(self, event: TaskPayload) -> TaskResponse:
         logger.info(f"Creating GitHub team for {self.payload.data.team_name}")
         
         githubTeam = orgClient.create_org_team(self.payload.data.team_no, self.payload.data.team_name)
@@ -29,9 +29,9 @@ class CreateTeamTask(BaseEventTask):
         taskClient.create_repo_task(self.payload.data)
                             
         logger.info(f"Successfully created GitHub team: {self.payload.data.team_name}")
-        return {
-            "success": True,
-            "message": f"GitHub team {self.payload.data.team_name} created successfully.",
-            "payload": self.payload.model_dump()
-        }
+        return TaskResponse(
+            success=True,
+            message=f"GitHub team {self.payload.data.team_name} created successfully.",
+            payload=self.payload.model_dump()
+        )
         
