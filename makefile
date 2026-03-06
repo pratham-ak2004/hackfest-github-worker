@@ -9,3 +9,6 @@ flower:
 
 compose:
 	docker-compose up -d
+
+dashboard:
+	fastapi run server.py
