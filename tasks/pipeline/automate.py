@@ -94,7 +94,6 @@ class AutomateRepoPropertiesUpdate(BaseEventTask):
                 taskClient.create_update_repo_task(repo)
             if repo.toggle_access:
                 taskClient.create_update_team_task(repo)
-                # taskClient.update_repo_access_task(repo.repo_owner, repo.repo_name, repo.permission, repo.privacy)
         
         logger.info(f"Received {len(self.payload.data)} repo properties to update.")
         return TaskResponse(

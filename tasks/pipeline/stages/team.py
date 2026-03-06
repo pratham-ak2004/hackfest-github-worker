@@ -1,5 +1,5 @@
 from tasks import BaseEventTask
-from utils.schema import Payload, TeamPayload, TaskResponse
+from utils.schema import Payload, TeamPayload, TaskResponse, GithubRepoProperties
 from utils.github import orgClient
 from utils.tasks import taskClient
 from utils.logger import get_logger
@@ -38,3 +38,34 @@ class CreateTeamTask(BaseEventTask):
 
 class UpdateTeamTask(BaseEventTask):
     name = "task.pipeline.update_team"
+    
+    class TaskPayload(Payload):
+        data: GithubRepoProperties
+        
+    def validate(self, event):
+        try:
+            self.payload = self.TaskPayload(**event)
+            return True
+        except Exception as e:
+            logger.error(f"Validation error in {self.name}: {e}")
+            return False
+        
+    def process(self, event: TaskPayload) -> TaskResponse:
+        logger.info(f"Updating GitHub team for {self.payload.data.team_name}")
+        
+        github_team = orgClient.update_team_permissions(
+            org=orgClient.org_name,
+            team_slug=self.payload.data.github_team.slug,
+            permission=self.payload.data.permission,
+            privacy=self.payload.data.privacy
+        )
+        self.payload.data.github_team = github_team
+        
+        logger.info(f"Successfully updated GitHub team: {self.payload.data.team_name}")
+        return TaskResponse(
+            success=True,
+            message=f"GitHub team {self.payload.data.team_name} updated successfully.",
+            payload=self.payload.model_dump()
+        )
+        
+        

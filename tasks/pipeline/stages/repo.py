@@ -1,6 +1,6 @@
 from tasks.base import BaseEventTask
 from tasks.pipeline.stages.invite import SendOrgInviteTask
-from utils.schema import Payload, TeamPayload, TaskResponse, TeamDetails
+from utils.schema import Payload, TeamPayload, TaskResponse, TeamDetails, GithubRepoProperties
 from utils.logger import get_logger
 from utils.github import orgClient
 from utils.tasks import taskClient
@@ -52,3 +52,31 @@ class CreateRepoTask(BaseEventTask):
 
 class UpdateRepoTask(BaseEventTask):
     name = "task.pipeline.update_repo"
+    
+    class TaskPayload(Payload):
+        data: GithubRepoProperties
+        
+    def validate(self, event):
+        try:
+            self.payload = self.TaskPayload(**event)
+            return True
+        except Exception as e:
+            logger.error(f"Validation error in {self.name}: {e}")
+            return False
+        
+    def process(self, event: TaskPayload) -> TaskResponse:
+        logger.info(f"Updating GitHub repository properties for {self.payload.data.repo_name}")
+        
+        updatedRepo = orgClient.update_repo_visibility(
+            repo_name=self.payload.data.repo_name,
+            repo_owner=self.payload.data.repo_owner,
+            private=self.payload.data.private
+        )
+        self.payload.data.github_repo = updatedRepo
+        
+        logger.info(f"Successfully updated GitHub repository: {self.payload.data.repo_name}")
+        return TaskResponse(
+            success=True,
+            message=f"GitHub repository {self.payload.data.repo_name} updated successfully.",
+            payload=self.payload.model_dump()
+        )
