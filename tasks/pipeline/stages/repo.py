@@ -48,3 +48,7 @@ class CreateRepoTask(BaseEventTask):
             message=f"GitHub repository {self.payload.data.team_name} created successfully.",
             payload=self.payload.model_dump()
         )
+        
+
+class UpdateRepoTask(BaseEventTask):
+    name = "task.pipeline.update_repo"

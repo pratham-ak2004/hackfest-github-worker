@@ -1,8 +1,9 @@
 import pika, smtplib, email, os
 from config import settings
 from utils.logger import get_logger
-from utils.schema import TeamPayload, Payload
+from utils.schema import TeamPayload, Payload, GithubRepoProperties
 from tasks.pipeline.stages.invite import SendOrgInviteTask
+from tasks.pipeline.automate import AutomateSelectedTeamsNotificationTask
 from uuid import uuid7 ## using uuid7 for better db indexing performance
 from email.message import EmailMessage
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
@@ -46,6 +47,18 @@ class TaskClient:
         payload = Payload(data=member_payload)
         self._send_task("task.pipeline.send_invite_notification", payload)
         
+    def create_selected_teams_notification_task(self, member_payload: AutomateSelectedTeamsNotificationTask.TaskPayload.DataModel) -> None:
+        payload = Payload(data=member_payload)
+        self._send_task("task.pipeline.selected_teams_notification", payload)
+        
+    def create_update_repo_task(self, repo_payload: GithubRepoProperties) -> None:
+        payload = Payload(data=repo_payload)
+        self._send_task("task.pipeline.update_repo", payload)
+        
+    def create_update_team_task(self, repo_payload: GithubRepoProperties) -> None:
+        payload = Payload(data=repo_payload)
+        self._send_task("task.pipeline.update_team", payload)
+        
     
 class MailerClient:        
     def __init__(self):
@@ -60,7 +73,7 @@ class MailerClient:
         )
         
         self.templates = dict()
-        template_list = ["invite"]
+        template_list = ["invite", "selected_notification"]
         for template_name in template_list:
             self.templates[template_name] = self.jinja_env.get_template(f"{template_name}.html")
         
@@ -80,6 +93,16 @@ class MailerClient:
             subject=subject,
             repository_url=repository_url,
             repository_name=repository_name
+        )
+        self._send_mail(to_email=to_email, subject=subject, body=html_content)
+        
+    def send_selected_team_notification(self, to_email: str, subject: str, team_name: str, track: str, is_leader: bool) -> None:
+        template = self.templates["selected_notification"]
+        html_content = template.render(
+            subject=subject,
+            team_name=team_name,
+            track=track,
+            is_leader=is_leader
         )
         self._send_mail(to_email=to_email, subject=subject, body=html_content)
         

@@ -9,6 +9,7 @@ class HttpMethod(str, Enum):
     POST = "POST"
     PUT = "PUT"
     DELETE = "DELETE"
+    PATCH = "PATCH"
 
 
 class TimeMeta(BaseModel):
@@ -49,6 +50,16 @@ class GithubInvitation(BaseModel):
     email: str
     created_at: str
     invitation_teams_url: str
+    
+class GithubRepoProperties(BaseModel):
+    toggle_visibility: bool = False
+    repo_owner: str
+    repo_name: str
+    private: bool = True
+    
+    toggle_access: bool = False
+    permission: str = "push" # pull, push, admin
+    privacy: str = "secret" # secret, closed
 
 
 class TeamMember(BaseModel):

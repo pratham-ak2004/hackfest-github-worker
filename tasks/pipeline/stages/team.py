@@ -35,3 +35,6 @@ class CreateTeamTask(BaseEventTask):
             payload=self.payload.model_dump()
         )
         
+
+class UpdateTeamTask(BaseEventTask):
+    name = "task.pipeline.update_team"

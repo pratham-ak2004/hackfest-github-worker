@@ -19,6 +19,7 @@ class GithubClient:
         self._limit = 0
         self._remaining = 0
         self._reset = 0
+        self._username_cache = {}
         
         self.year = 26
         self.org_name = "hackfest-dev"
@@ -49,7 +50,20 @@ class GithubClient:
         }
         
     def _get_user_id(self, username: str) -> int:
-        return 0
+        """Get the GitHub user ID for the specified username"""
+        
+        if username in self._username_cache:
+            return self._username_cache[username]
+        
+        route = "/users/" + username
+        headers = self._get_headers()
+        response = self._make_request(route, HttpMethod.GET, headers)
+        response.raise_for_status()
+        
+        user_id = int(response.json().id)
+        self._username_cache[username] = user_id
+        
+        return user_id
     
     def generate_team_name(self, team_no: int, team_name: Optional[str]) -> str:
         return f"HF{self.year}-T{team_no:02d}{f'-{team_name}' if team_name else ''}"
@@ -86,7 +100,7 @@ class GithubClient:
         response.raise_for_status()
         return response.json()
     
-    def create_org_team(self,team_no: int, team_name: Optional[str] = None) -> GithubTeam:
+    def create_org_team(self,team_no: int, team_name: Optional[str] = None, permission: str = "push", privacy: str = "secret") -> GithubTeam:
         """Create a new team in the organization for the specified team number and name
         
         - `Note`: the team is `closed` by default, meaning everyone in the organization can view this team.
@@ -96,7 +110,8 @@ class GithubClient:
         payload = {
             "name": self.generate_team_name(team_no, team_name),
             "description": f"Hackfest{self.year} team for T{team_no:02d}{f' {team_name}' if team_name else ''}",
-            "privacy": "closed"
+            "privacy": privacy,
+            "permission": permission
         }
         headers = self._get_headers()
         
@@ -112,13 +127,13 @@ class GithubClient:
             html_url=data["html_url"]
         )
     
-    def create_team_repo(self, team_id: int, team_no: int) -> GithubRepository:
+    def create_team_repo(self, team_id: int, team_no: int, private: bool = True) -> GithubRepository:
         """Create a new repository for the specified Team"""
         
         payload = {
             "name": self.generate_repo_name(team_no),
             "description": f"Hackfest{self.year} repository for T{team_no:02d}",
-            "private": True,
+            "private": private,
             "team_id": team_id
         }
         headers = self._get_headers()
@@ -160,6 +175,48 @@ class GithubClient:
             created_at=data["created_at"],
             invitation_teams_url=data["invitation_teams_url"]
         )
+        
+    def update_repo_visibility(self, repo_owner: str, repo_name: str, private: bool) -> GithubRepository:
+        """Update the visibility of the specified repository"""
+        
+        payload = {
+            "private": private
+        }
+        headers = self._get_headers()
+        
+        response = self._make_request(f"/repos/{repo_owner}/{repo_name}", HttpMethod.PATCH, headers, payload)
+        response.raise_for_status()
+        data = response.json()
+        
+        return GithubRepository(
+            id=data["id"],
+            name=data["name"],
+            full_name=data["full_name"],
+            url=data["url"],
+            html_url=data["html_url"]
+        )
+        
+    def update_team_permissions(self, org: str, team_slug: str, permission: str, privacy: str) -> GithubTeam:
+        """Update the permissions of the specified team"""
+        
+        payload = {
+            "permission": permission,
+            "privacy": privacy
+        }
+        headers = self._get_headers()
+        
+        response = self._make_request(f"/orgs/{org}/teams/{team_slug}", HttpMethod.PATCH, headers, payload)
+        response.raise_for_status()
+        data = response.json()
+        
+        return GithubTeam(
+            id=data["id"],
+            name=data["name"],
+            slug=data["slug"],
+            url=data["url"],
+            html_url=data["html_url"]
+        )
+        
         
 orgClient = GithubClient(token=settings.GITHUB_ORG_TOKEN)
 inviteClient = GithubClient(token=settings.GITHUB_INVITE_TOKEN)
