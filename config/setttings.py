@@ -49,9 +49,12 @@ class Settings:
     SMTP_USER = get_env.__func__("SMTP_USER", None, required=True)
     SMTP_PASSWORD = get_env.__func__("SMTP_PASSWORD", None, required=True)
     
-    HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
     GITHUB_ORG_TOKEN = get_env.__func__("GITHUB_ORG_TOKEN", None, required=True)
     GITHUB_INVITE_TOKEN = get_env.__func__("GITHUB_INVITE_TOKEN", None, required=True)
+    
+    HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
+    DASHBOARD_HOST = get_env.__func__("DASHBOARD_HOST", "0.0.0.0")
+    DASHBOARD_PORT = int(get_env.__func__("DASHBOARD_PORT", "8000"))
     
     APPLICATION_NAME = "hackfest-github"
     LOG_LEVEL = get_env.__func__("LOG_LEVEL", "INFO")

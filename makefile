@@ -11,4 +11,4 @@ compose:
 	docker-compose up -d
 
 dashboard:
-	fastapi run server.py
+	python app.py --dashboard

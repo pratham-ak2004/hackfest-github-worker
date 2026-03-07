@@ -216,6 +216,46 @@
         font-size: 12px;
         color: var(--muted);
       }
+      .sync-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .sync-info {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .sync-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .sync-badge.running {
+        background: #10b98120;
+        color: var(--ok);
+      }
+      .sync-badge.stopped {
+        background: #94a3b820;
+        color: var(--muted);
+      }
+      button.danger {
+        background: var(--bad);
+        border-color: var(--bad);
+        color: white;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
@@ -239,6 +279,22 @@
 
       <div class="card-grid" id="summaryCards"></div>
       <div class="status-strip" id="statusBreakdown"></div>
+
+      <!-- Sync Control Panel -->
+      <div class="sync-panel">
+        <div class="sync-info">
+          <div>
+            <span class="label">Sync Status:</span>
+            <span class="sync-badge" id="syncBadge">STOPPED</span>
+          </div>
+          <div class="sub" id="syncStats">-</div>
+        </div>
+        <div class="controls">
+          <button id="syncStart" class="primary">Start Sync</button>
+          <button id="syncStop" class="danger" disabled>Stop Sync</button>
+          <button id="syncReset" disabled>Reset</button>
+        </div>
+      </div>
 
       <div class="table-wrap">
         <div class="filter-row">
@@ -453,8 +509,81 @@
           task.traceback || "-";
       }
 
+      async function loadSyncStatus() {
+        try {
+          const res = await fetch("/api/sync/status");
+          const data = await res.json();
+
+          const badge = document.getElementById("syncBadge");
+          const stats = document.getElementById("syncStats");
+          const startBtn = document.getElementById("syncStart");
+          const stopBtn = document.getElementById("syncStop");
+          const resetBtn = document.getElementById("syncReset");
+
+          if (data.running) {
+            badge.textContent = "RUNNING";
+            badge.className = "sync-badge running";
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            resetBtn.disabled = true;
+          } else {
+            badge.textContent = "STOPPED";
+            badge.className = "sync-badge stopped";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            resetBtn.disabled = false;
+          }
+
+          const lastSync = data.last_sync ? fmtDate(data.last_sync) : "Never";
+          const errText =
+            data.total_errors > 0 ? ` · ${data.total_errors} errors` : "";
+          stats.textContent = `Synced: ${data.synced_count} · Last: ${lastSync} · Poll: ${data.poll_interval}s${errText}`;
+        } catch (err) {
+          console.error("Failed to load sync status:", err);
+        }
+      }
+
+      async function startSync() {
+        try {
+          const res = await fetch("/api/sync/start", { method: "POST" });
+          const data = await res.json();
+          alert(data.message || "Sync started");
+          await loadSyncStatus();
+        } catch (err) {
+          alert("Failed to start sync: " + err);
+        }
+      }
+
+      async function stopSync() {
+        try {
+          const res = await fetch("/api/sync/stop", { method: "POST" });
+          const data = await res.json();
+          alert(data.message || "Sync stopped");
+          await loadSyncStatus();
+        } catch (err) {
+          alert("Failed to stop sync: " + err);
+        }
+      }
+
+      async function resetSync() {
+        if (
+          !confirm(
+            "Reset sync state? This will clear counters and start from the beginning.",
+          )
+        )
+          return;
+        try {
+          const res = await fetch("/api/sync/reset", { method: "POST" });
+          const data = await res.json();
+          alert(data.message || "Sync reset");
+          await loadSyncStatus();
+        } catch (err) {
+          alert("Failed to reset sync: " + err);
+        }
+      }
+
       async function loadAll() {
-        await Promise.all([loadStats(), loadTasks()]);
+        await Promise.all([loadStats(), loadTasks(), loadSyncStatus()]);
         if (state.selectedTaskId) {
           loadTaskDetail(state.selectedTaskId);
         }
@@ -492,6 +621,11 @@
           loadTasks();
         }
       });
+
+      // Sync control event listeners
+      document.getElementById("syncStart").addEventListener("click", startSync);
+      document.getElementById("syncStop").addEventListener("click", stopSync);
+      document.getElementById("syncReset").addEventListener("click", resetSync);
 
       loadAll();
       setupAutoRefresh();
