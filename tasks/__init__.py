@@ -1,7 +1,9 @@
 from .base import BaseEventTask
 from eventprocessor.celery_app import app
-from tasks.pipeline.automate import register_automate_github_task
+from tasks.pipeline.automate import register_automate_github_task, register_automate_repo_properties_update_task, register_automate_selected_teams_notification_task
 
 register_automate_github_task()
+register_automate_selected_teams_notification_task()
+register_automate_repo_properties_update_task()
 
 __all__ = ["BaseEventTask"]

@@ -8,6 +8,7 @@ logger = get_logger(__name__)
 
 def register_automate_github_task():
     from .stages import CreateTeamTask, CreateRepoTask, SendOrgInviteTask, SendInviteNotificationTask
+    app.register_task(AutomateGithubTask())
     app.register_task(CreateTeamTask())
     app.register_task(CreateRepoTask())
     app.register_task(SendOrgInviteTask())
@@ -40,6 +41,11 @@ class AutomateGithubTask(BaseEventTask):
             payload=self.payload.data
         )
         
+def register_automate_selected_teams_notification_task():
+    from .stages import SendSelectedTeamsNotificationTask
+    app.register_task(AutomateSelectedTeamsNotificationTask())
+    app.register_task(SendSelectedTeamsNotificationTask())
+    
 class AutomateSelectedTeamsNotificationTask(BaseEventTask):
     name = "task.pipeline.automate.selected_teams_notification"
     
@@ -71,6 +77,11 @@ class AutomateSelectedTeamsNotificationTask(BaseEventTask):
             payload=self.payload.data
         )
         
+def register_automate_repo_properties_update_task():
+    from .stages import UpdateRepoTask, UpdateTeamTask
+    app.register_task(AutomateRepoPropertiesUpdate())
+    app.register_task(UpdateRepoTask())
+    app.register_task(UpdateTeamTask())
     
 class AutomateRepoPropertiesUpdate(BaseEventTask):
     name = "task.pipeline.automate.update_repo_properties"

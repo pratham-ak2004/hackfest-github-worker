@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import BaseModel
 
@@ -86,7 +86,7 @@ class TeamPayload(TeamDetails):
     
 
 class Payload(BaseModel):
-    data: any
+    data: Any
     
     
 class TaskResponse(BaseModel):

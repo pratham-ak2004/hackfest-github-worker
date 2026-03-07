@@ -1,6 +1,7 @@
 from tasks.base import BaseEventTask
 from utils.logger import get_logger
 from utils.schema import Payload, TeamDetails, TeamMember, TaskResponse
+from pydantic import BaseModel
 from utils.github import inviteClient
 from utils.tasks import taskClient
 
@@ -10,7 +11,7 @@ class SendOrgInviteTask(BaseEventTask):
     name = "task.pipeline.send_invite"
     
     class TaskPayload(Payload):
-        class DataModel:
+        class DataModel(BaseModel):
             team: TeamDetails
             member: TeamMember  
         data: DataModel
@@ -53,7 +54,7 @@ class AcceptOrgInviteTask(BaseEventTask):
     name = "task.pipeline.accept_invite"
     
     class TaskPayload(Payload):
-        class DataModel:
+        class DataModel(BaseModel):
             team: TeamDetails
             member: TeamMember
         data: DataModel

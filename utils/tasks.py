@@ -2,8 +2,6 @@ import pika, smtplib, email, os
 from config import settings
 from utils.logger import get_logger
 from utils.schema import TeamPayload, Payload, GithubRepoProperties
-from tasks.pipeline.stages.invite import SendOrgInviteTask
-from tasks.pipeline.automate import AutomateSelectedTeamsNotificationTask
 from uuid import uuid7 ## using uuid7 for better db indexing performance
 from email.message import EmailMessage
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
@@ -39,15 +37,15 @@ class TaskClient:
         payload = Payload(data=team_payload)
         self._send_task("task.pipeline.create_repo", payload)
         
-    def create_invite_task(self, member_payload: SendOrgInviteTask.TaskPayload.DataModel) -> None:
+    def create_invite_task(self, member_payload: dict) -> None:
         payload = Payload(data=member_payload)
         self._send_task("task.pipeline.send_invite", payload)
         
-    def create_invite_notification_task(self, member_payload: SendOrgInviteTask.TaskPayload.DataModel) -> None:
+    def create_invite_notification_task(self, member_payload: dict) -> None:
         payload = Payload(data=member_payload)
         self._send_task("task.pipeline.send_invite_notification", payload)
         
-    def create_selected_teams_notification_task(self, member_payload: AutomateSelectedTeamsNotificationTask.TaskPayload.DataModel) -> None:
+    def create_selected_teams_notification_task(self, member_payload: dict) -> None:
         payload = Payload(data=member_payload)
         self._send_task("task.pipeline.selected_teams_notification", payload)
         
@@ -62,7 +60,7 @@ class TaskClient:
     
 class MailerClient:        
     def __init__(self):
-        self.smtp_session = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
+        self.smtp_session = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
         self.smtp_session.starttls()
         self.smtp_session.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         
