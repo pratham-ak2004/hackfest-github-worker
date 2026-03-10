@@ -12,3 +12,8 @@ compose:
 
 dashboard:
 	python app.py --dashboard
+
+test:
+	echo "Select the test to run"
+# 	python test.py --automate
+# 	python test.py --notify

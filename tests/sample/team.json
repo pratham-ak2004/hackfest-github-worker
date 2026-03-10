@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "team_id": "",
+      "team_no": 0,
+      "team_name": "",
+      "members": [
+        {
+          "id": 0,
+          "name": "",
+          "username": "",
+          "email": ""
+        }
+      ]
+    }
+  ]
+}

@@ -33,12 +33,11 @@ class SendOrgInviteTask(BaseEventTask):
         github_invite = inviteClient.send_team_invite(
             team_ids=[self.payload.data.team.github_team.id],
             username=self.payload.data.member.username,
-            email=self.payload.data.member.email,
-            user_id=self.payload.data.member.id
+            email=self.payload.data.member.email
         )
         self.payload.data.member.github_invite = github_invite
         
-        # send notification to user
+        # Follow up task: send notification to user
         taskClient.create_invite_notification_task(self.payload.data)
         
         logger.info(f"Successfully sent invite to {self.payload.data.member.name}")

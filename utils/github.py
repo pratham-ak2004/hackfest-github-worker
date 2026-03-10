@@ -6,6 +6,7 @@ from utils.locks import github_lock
 
 import requests, time
 
+# Fine-grained Permissions: Administration(organization, repository), Members(organization)
 class GithubClient:    
     def __init__(self, token=None) -> None:
         if token is None:
@@ -23,7 +24,7 @@ class GithubClient:
         self._username_cache = {}
         
         self.year = 26
-        self.org_name = "hackfest-dev"
+        self.org_name = settings.GITHUB_ORG
         
         self.rate_limit()
         
@@ -46,7 +47,7 @@ class GithubClient:
     # TODO: Implement request and caching
     def _get_headers(self) -> dict:
         return {
-            "Authorization": f"Bearer {self.token}",
+            "Authorization": f"token {self.token}",
             "Accept": "application/vnd.github+json",
             "X-Github-Api-Version": self._github_api_version
         }
@@ -67,7 +68,7 @@ class GithubClient:
         
         return user_id
     
-    def generate_team_name(self, team_no: int, team_name: Optional[str]) -> str:
+    def generate_team_name(self, team_no: int, team_name: Optional[str] = None) -> str:
         return f"HF{self.year}-T{team_no:02d}{f'-{team_name}' if team_name else ''}"
     
     def generate_repo_name(self, team_no: int) -> str:
@@ -135,7 +136,7 @@ class GithubClient:
         payload = {
             "name": self.generate_repo_name(team_no),
             "description": f"Hackfest{self.year} repository for T{team_no:02d}",
-            "private": private,
+            "private": "true" if private else "false",
             "team_id": team_id
         }
         headers = self._get_headers()
@@ -152,24 +153,34 @@ class GithubClient:
             html_url=data["html_url"]
         )
         
-    def send_team_invite(self, team_ids: list[int], username: str, email: Optional[str], user_id: Optional[int]) -> GithubInvitation:
+    def send_team_invite(self, team_ids: list[int], username: str, email: Optional[str] = None, user_id: Optional[int] = None) -> GithubInvitation:
         """Send an invite to the specified user to join the team"""
         
-        if email is None:
+        payload = {
+            "role": "direct_member",
+            "team_ids": team_ids
+        }
+        if email is not None:
+            payload["email"] = email
+        else:
             if user_id is None:
                 user_id = self._get_user_id(username)
-        
-        payload = {
-            "email": email,
-            "invitee_id": user_id,
-            "role": "direct_member",
-            "team_ids": team_ids        
-        }
+                payload["invitee_id"] = user_id
+
         headers = self._get_headers()
         
         response = self._make_request(f"/orgs/{self.org_name}/invitations", HttpMethod.POST, headers, payload)
-        response.raise_for_status()
+        
         data = response.json()
+        if response.status_code == 422:
+            errors = data.get("errors", [])
+            if errors[0]["message"] == "A user with this email address is already a part of this organization":
+                return GithubInvitation(
+                    id=-1,
+                    email=email,
+                    created_at=time.ctime(),
+                    invitation_teams_url=""
+                )
         
         return GithubInvitation(
             id=data["id"],

@@ -5,34 +5,75 @@ from utils.schema import TeamPayload, Payload, GithubRepoProperties
 from uuid import uuid7 ## using uuid7 for better db indexing performance
 from email.message import EmailMessage
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
-from utils.locks import smtp_lock
+from utils.locks import smtp_lock, rabbitmq_lock
 
 logger = get_logger(__name__)
 
 class TaskClient:
     def __init__(self):
+        self.connection = None
+        self.channel = None
+        self.connect()
+
+    def connect(self):
+        if self.connection is not None and not self.connection.is_closed:
+            try:
+                self.connection.close()
+            except Exception:
+                pass
+
         self.connection = pika.BlockingConnection(
             pika.URLParameters(
                 f"amqp://{settings.RABBITMQ_USERNAME}:{settings.RABBITMQ_PASSWORD}@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}/%2F"
-                )
-            )
-        self.channel = self.connection.channel()
-        self.queue = self.channel.queue_declare(queue=settings.EVENT_QUEUE, durable=True)
-    
-    def _send_task(self, task_name: str, payload: Payload) -> None:
-        self.channel.basic_publish(
-            exchange="",
-            routing_key=settings.EVENT_QUEUE,
-            body=json.dumps({
-                "id": str(uuid7()),
-                "task": task_name,
-                "args": [payload.model_dump()],
-            }).encode("utf-8"),
-            properties=pika.BasicProperties(
-                delivery_mode=2,
-                content_type="application/json"
             )
         )
+        self.channel = self.connection.channel()
+        self.channel.queue_declare(queue=settings.EVENT_QUEUE, durable=True)
+
+    def _ensure_connection(self):
+        if self.connection is None or self.connection.is_closed:
+            logger.warning("RabbitMQ connection closed. Reconnecting...")
+            self.connect()
+            return
+
+        if self.channel is None or self.channel.is_closed:
+            logger.warning("RabbitMQ channel closed. Reopening...")
+            self.channel = self.connection.channel()
+            self.channel.queue_declare(queue=settings.EVENT_QUEUE, durable=True)
+
+    def _send_task(self, task_name: str, payload: Payload) -> None:
+        with rabbitmq_lock:
+            self._ensure_connection()
+            try:
+                self.channel.basic_publish(
+                    exchange="",
+                    routing_key=settings.EVENT_QUEUE,
+                    body=json.dumps({
+                        "id": str(uuid7()),
+                        "task": task_name,
+                        "args": [payload.model_dump()],
+                    }).encode("utf-8"),
+                    properties=pika.BasicProperties(
+                        delivery_mode=2,
+                        content_type="application/json"
+                    )
+                )
+            except Exception as e:
+                logger.error(f"Failed to publish task '{task_name}': {e}. Retrying after reconnect...")
+                self.connect()
+                self.channel.basic_publish(
+                    exchange="",
+                    routing_key=settings.EVENT_QUEUE,
+                    body=json.dumps({
+                        "id": str(uuid7()),
+                        "task": task_name,
+                        "args": [payload.model_dump()],
+                    }).encode("utf-8"),
+                    properties=pika.BasicProperties(
+                        delivery_mode=2,
+                        content_type="application/json"
+                    )
+                )
     
     def create_team_task(self, team_payload: TeamPayload) -> None:
         payload = Payload(data=team_payload)

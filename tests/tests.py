@@ -1,13 +1,14 @@
 import json, os, pika
 import sys
+from dotenv import load_dotenv
 from uuid import uuid7
 from config import settings
 
-from tasks.pipeline.automate import AutomateSelectedTeamsNotificationTask
+load_dotenv()
 
-json_path = "/home/pathu/repos/hackfest-github/tests/json"
+from tasks.pipeline.automate import AutomateSelectedTeamsNotificationTask, AutomateGithubTask
 
-data = json.load(open(os.path.join(json_path, "notification.json")))
+json_path = os.getenv("DATA_PATH")
 
 connection = pika.BlockingConnection(
     pika.URLParameters(
@@ -17,14 +18,14 @@ connection = pika.BlockingConnection(
 channel = connection.channel()
 channel.queue_declare(queue=settings.EVENT_QUEUE, durable=True)
 
-def send_task(task_name: str, payload: dict) -> None:
+def send_task(task_name: str, payload: dict, validator: callable) -> None:
     channel.basic_publish(
         exchange="",
         routing_key=settings.EVENT_QUEUE,
         body=json.dumps({
             "id": str(uuid7()),
             "task": task_name,
-            "args": [AutomateSelectedTeamsNotificationTask.TaskPayload(**payload).model_dump()],
+            "args": [validator(**payload).model_dump()],
         }).encode("utf-8"),
         properties=pika.BasicProperties(
             delivery_mode=2,
@@ -32,5 +33,10 @@ def send_task(task_name: str, payload: dict) -> None:
         )
     )
 
-def run():
-    send_task(AutomateSelectedTeamsNotificationTask.name, data)
+def test_notification():
+    data = json.load(open(os.path.join(json_path, "notification.json")))
+    send_task(AutomateSelectedTeamsNotificationTask.name, data, AutomateSelectedTeamsNotificationTask.TaskPayload)
+    
+def test_automate():
+    data = json.load(open(os.path.join(json_path, "team.json")))
+    send_task(AutomateGithubTask.name, data, AutomateGithubTask.TaskPayload)

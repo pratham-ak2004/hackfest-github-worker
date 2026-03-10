@@ -33,7 +33,7 @@ class BaseEventTask(Task, ABC):
             
             result = self.process(event)
             self.logger.debug(f"Successfully processed {self.name}")
-            return result
+            return result.model_dump()
             
         except Exception as exc:
             self.logger.error(f"Error in {self.name}: {exc}")

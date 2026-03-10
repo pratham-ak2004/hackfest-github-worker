@@ -30,6 +30,7 @@ class CreateRepoTask(BaseEventTask):
         githubRepo = orgClient.create_team_repo(self.payload.data.github_team.id, self.payload.data.team_no)
         self.payload.data.github_repo = githubRepo
         
+        # Follow up task: send invites to team members
         for member in self.payload.data.members:
             logger.debug(f"Scheduling invite task for member {member.name} of team {self.payload.data.team_name}")
             taskClient.create_invite_task(SendOrgInviteTask.TaskPayload.DataModel(

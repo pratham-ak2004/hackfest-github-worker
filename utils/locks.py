@@ -28,3 +28,4 @@ def get_process_lock(name: str) -> multiprocessing.Lock:
 
 smtp_lock = get_process_lock("smtp_client")
 github_lock = get_process_lock("github_client")
+rabbitmq_lock = get_process_lock("rabbitmq_client")

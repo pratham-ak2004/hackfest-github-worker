@@ -25,7 +25,7 @@ class CreateTeamTask(BaseEventTask):
         
         githubTeam = orgClient.create_org_team(self.payload.data.team_no, self.payload.data.team_name)
         self.payload.data.github_team = githubTeam
-        # follow up task
+        # follow up task: create repo for team
         taskClient.create_repo_task(self.payload.data)
                             
         logger.info(f"Successfully created GitHub team: {self.payload.data.team_name}")

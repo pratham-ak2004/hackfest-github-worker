@@ -128,3 +128,6 @@ sandbox/
 
 # Editors
 .vscode/
+
+.logfire
+tests/json/

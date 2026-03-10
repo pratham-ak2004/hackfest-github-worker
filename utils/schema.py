@@ -3,6 +3,11 @@ from typing import Optional, Any
 
 from pydantic import BaseModel
 
+# import logfire
+
+# logfire.configure()
+# logfire.instrument_pydantic()
+
 
 class HttpMethod(str, Enum):
     GET = "GET"
@@ -71,11 +76,11 @@ class TeamMember(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
     github_invite: Optional[GithubInvitation] = None
-    credential: Optional[GithubUserCredential] = None
+    # credential: Optional[GithubUserCredential] = None
 
 
 class TeamDetails(BaseModel):
-    team_id: Optional[str]
+    team_id: Optional[str] = None
     team_no: int
     team_name: Optional[str] = None
     github_team: Optional[GithubTeam] = None
