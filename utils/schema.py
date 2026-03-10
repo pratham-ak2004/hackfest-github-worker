@@ -75,6 +75,7 @@ class TeamMember(BaseModel):
 
 
 class TeamDetails(BaseModel):
+    team_id: Optional[str]
     team_no: int
     team_name: Optional[str] = None
     github_team: Optional[GithubTeam] = None

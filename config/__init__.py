@@ -1,1 +1,1 @@
-from .setttings import settings
+from .settings import settings

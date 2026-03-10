@@ -2,12 +2,17 @@ import psycopg2
 import json
 import pickle
 import asyncio
+import requests, json
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection as Connection
 from typing import Any, Generator
 from config import settings
+
+from tasks.pipeline.stages.team import CreateTeamTask
+from tasks.pipeline.stages.repo import CreateRepoTask
+from utils.schema import TaskResponse, GithubTeam, GithubRepository, HttpMethod
 
 class DatabaseManager:
     connection: Connection | None = None
@@ -251,7 +256,34 @@ class SyncManager:
             
         self.db_manager = db_manager
         self.query_manager = query_manager
+        
+    async def _make_request(self, method: HttpMethod, route: str, payload: dict[str, Any]) -> requests.Response:
+        route = route if route.startswith("/") else f"/{route}"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Hackfest-Token": settings.HACKFEST_SECRET
+        }
+        response = await requests.request(method, f"https://{settings.HACKFEST_URL}/api/worker{route}", headers=headers, json=payload)
+        return response
     
+    async def save_github_team(self, data: CreateTeamTask.TaskPayload) -> None:
+        payload = GithubTeam(**data.data.github_team.model_dump())
+        response = await self._make_request(HttpMethod.PUT, "/team", payload={
+            "team_id": data.data.team_id,
+            "team_no": data.data.team_no,
+            "github_team": payload.model_dump(),
+        })
+        response.raise_for_status()
+        
+    async def save_github_repo(self, data: CreateRepoTask.TaskPayload) -> None:
+        payload = GithubRepository(**data.data.github_repo.model_dump())
+        response = await self._make_request(HttpMethod.PUT, "/repo", payload={
+            "team_id": data.data.team_id,
+            "team_no": data.data.team_no,
+            "github_repo": payload.model_dump(),
+        })
+        response.raise_for_status()
+
     async def sync_to_user_db(self, task_row: dict[str, Any], decoded_result: dict[str, Any]) -> None:
         """
             TODO: Implement your PUT logic to external user DB here.
@@ -260,8 +292,26 @@ class SyncManager:
                     task_row: Dict containing id, task_id, name, status, date_done, etc.
                     decoded_result: Dict with 'decoded' (the actual result) and 'format' (json/pickle/text)
         """
-        # TODO: Add your implementation here
-        pass
+        task_name = task_row.get("name", "")
+        task_response = TaskResponse(**decoded_result.get("decoded", {}))
+        
+        try:
+            match task_name:
+                case CreateTeamTask.name:
+                    payload = CreateTeamTask.TaskPayload(**task_response.payload)
+                    await self.save_github_team(payload)
+                case CreateRepoTask.name:
+                    payload = CreateRepoTask.TaskPayload(**task_response.payload)
+                    await self.save_github_repo(payload)
+                case _:
+                    raise ValueError(f"No sync logic defined for task name: {task_name}")
+        except Exception as exc:
+            error_msg = f"Error syncing task {task_row.get('task_id')}: {exc}"
+            self.sync_state["errors"].append(
+                {"time": datetime.now(timezone.utc).isoformat(), "error": error_msg}
+                )
+            if len(self.sync_state["errors"]) > 20:
+                self.sync_state["errors"] = self.sync_state["errors"][-20:]
     
     async def sync_completed_tasks_loop(self) -> None:
         """Background loop that periodically syncs completed tasks to user DB"""
@@ -270,7 +320,7 @@ class SyncManager:
             try:
                 with self.db_manager.get_db() as conn:
                     with conn.cursor(cursor_factory=RealDictCursor) as cursor:
-                                            # Get tasks completed since last check
+                        # Get tasks completed since last check
                         cursor.execute(
                             """
                             SELECT id, task_id, name, status, result, date_done

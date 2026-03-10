@@ -2,6 +2,7 @@ from config import settings
 from email.utils import parsedate_to_datetime
 from utils.schema import HttpMethod, GithubMetaData, GithubTeam, GithubRepository, GithubInvitation
 from typing import Optional
+from utils.locks import github_lock
 
 import requests, time
 
@@ -37,7 +38,8 @@ class GithubClient:
         
     def _make_request(self, endpoint: str, method: HttpMethod, headers: dict, payload: dict = None) -> requests.Response:
         endpoint = endpoint if endpoint.startswith("/") else f"/{endpoint}"
-        response = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, json=payload)
+        with github_lock:
+            response = requests.request(method, f"{self.api_url}{endpoint}", headers=headers, json=payload)
         self._update_rate_limit(response)
         return response
     

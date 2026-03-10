@@ -70,4 +70,21 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      worker:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./
+      dockerfile: dockerfile
+    command: python app.py --dashboard
+    env_file:
+      - path: ./.env
+        required: true
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped

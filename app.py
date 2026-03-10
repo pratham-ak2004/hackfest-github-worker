@@ -14,7 +14,7 @@ def start_celery_worker():
 def start_flower():
     """Start Flower monitoring tool"""
     logger.info("Starting Flower monitoring tool...")
-    argv = ['flower', '--port=5555']
+    argv = ['flower', '--port=5555',f"--broker_api=http://{settings.RABBITMQ_USERNAME}:{settings.RABBITMQ_PASSWORD}@{settings.RABBITMQ_HOST}:15672/api/"]
     app.start(argv)
     
 def start_dashboard():

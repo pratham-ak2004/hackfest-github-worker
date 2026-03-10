@@ -53,11 +53,12 @@ class Settings:
     GITHUB_INVITE_TOKEN = get_env.__func__("GITHUB_INVITE_TOKEN", None, required=True)
     
     HACKFEST_SECRET = get_env.__func__("HACKFEST_SECRET",None, required=True)
+    HACKFEST_URL = get_env.__func__("HACKFEST_URL", "https://hackfest.dev")
     DASHBOARD_HOST = get_env.__func__("DASHBOARD_HOST", "0.0.0.0")
     DASHBOARD_PORT = int(get_env.__func__("DASHBOARD_PORT", "8000"))
     
     APPLICATION_NAME = "hackfest-github"
     LOG_LEVEL = get_env.__func__("LOG_LEVEL", "INFO")
-    EVENT_QUEUE = "events"
+    EVENT_QUEUE = "celery"
     
 settings = Settings()

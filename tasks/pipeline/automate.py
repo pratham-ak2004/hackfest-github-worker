@@ -38,7 +38,7 @@ class AutomateGithubTask(BaseEventTask):
         return TaskResponse(
             success=True,
             message=f"Processed {len(self.payload.data)} team payloads for GitHub automation.",
-            payload=self.payload.data
+            payload=self.payload.model_dump()
         )
         
 def register_automate_selected_teams_notification_task():
@@ -74,7 +74,7 @@ class AutomateSelectedTeamsNotificationTask(BaseEventTask):
         return TaskResponse(
             success=True,
             message=f"Processed {len(self.payload.data)} team payloads for selected teams notification.",
-            payload=self.payload.data
+            payload=self.payload.model_dump()
         )
         
 def register_automate_repo_properties_update_task():
@@ -110,5 +110,5 @@ class AutomateRepoPropertiesUpdate(BaseEventTask):
         return TaskResponse(
             success=True,
             message=f"Processed {len(self.payload.data)} team payloads for toggling repo access.",
-            payload=self.payload.data
+            payload=self.payload.model_dump()
         )

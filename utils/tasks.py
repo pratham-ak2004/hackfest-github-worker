@@ -1,10 +1,11 @@
-import pika, smtplib, email, os
+import pika, smtplib, os, json
 from config import settings
 from utils.logger import get_logger
 from utils.schema import TeamPayload, Payload, GithubRepoProperties
 from uuid import uuid7 ## using uuid7 for better db indexing performance
 from email.message import EmailMessage
 from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
+from utils.locks import smtp_lock
 
 logger = get_logger(__name__)
 
@@ -22,11 +23,15 @@ class TaskClient:
         self.channel.basic_publish(
             exchange="",
             routing_key=settings.EVENT_QUEUE,
-            body={
+            body=json.dumps({
                 "id": str(uuid7()),
                 "task": task_name,
-                "event": payload.model_dump(),
-            }
+                "args": [payload.model_dump()],
+            }).encode("utf-8"),
+            properties=pika.BasicProperties(
+                delivery_mode=2,
+                content_type="application/json"
+            )
         )
     
     def create_team_task(self, team_payload: TeamPayload) -> None:
@@ -58,11 +63,38 @@ class TaskClient:
         self._send_task("task.pipeline.update_team", payload)
         
     
-class MailerClient:        
-    def __init__(self):
+class MailerClient:
+    smtp_session = None
+    templates = dict()
+    
+    def connect(self):
+        if self.smtp_session is not None:
+            try:
+                self.smtp_session.quit()
+            except Exception:
+                pass
+            
         self.smtp_session = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+        self.smtp_session.ehlo()
         self.smtp_session.starttls()
+        self.smtp_session.ehlo()
         self.smtp_session.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        
+    def _ensure_connection(self):
+        if self.smtp_session is None:
+            self.connect()
+            return
+
+        try:
+            status = self.smtp_session.noop()[0]
+            if status != 250:
+                raise smtplib.SMTPServerDisconnected()
+        except Exception:
+            logger.warning("SMTP session unhealthy. Reconnecting...")
+            self.connect()
+            
+    def __init__(self):
+        self.connect()        
         
         self.template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
         self.jinja_env = Environment(
@@ -70,7 +102,6 @@ class MailerClient:
             autoescape=select_autoescape(["html", "xml"])
         )
         
-        self.templates = dict()
         template_list = ["invite", "selected_notification"]
         for template_name in template_list:
             self.templates[template_name] = self.jinja_env.get_template(f"{template_name}.html")
@@ -83,7 +114,15 @@ class MailerClient:
         message["Subject"] = subject
         message.set_content(body, subtype="html")
         
-        self.smtp_session.send_message(message)
+        with smtp_lock:
+            self._ensure_connection()
+            
+            try:
+                self.smtp_session.send_message(message)
+            except Exception as e:
+                logger.error(f"Error sending email: {e}")
+                self.connect()
+                self.smtp_session.send_message(message)
         
     def send_invite_notification(self, to_email: str, subject: str, repository_url: str, repository_name: str) -> None:
         template = self.templates["invite"]

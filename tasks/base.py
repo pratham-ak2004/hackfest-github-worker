@@ -28,8 +28,8 @@ class BaseEventTask(Task, ABC):
         """Celery task entry point"""
         try:
             if not self.validate(event):
-                self.logger.error(f"Invalid event: {self.name} - {event}")
-                return None 
+                self.logger.error(f"Invalid event data: {self.name} - {event}")
+                raise ValueError("Invalid event data")
             
             result = self.process(event)
             self.logger.debug(f"Successfully processed {self.name}")
