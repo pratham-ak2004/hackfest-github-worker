@@ -37,8 +37,8 @@ class SendOrgInviteTask(BaseEventTask):
         )
         self.payload.data.member.github_invite = github_invite
         
-        # Follow up task: send notification to user
-        taskClient.create_invite_notification_task(self.payload.data)
+        # Follow up task: send notification to user (optional)
+        # taskClient.create_invite_notification_task(self.payload.data)
         
         logger.info(f"Successfully sent invite to {self.payload.data.member.name}")
         return TaskResponse(

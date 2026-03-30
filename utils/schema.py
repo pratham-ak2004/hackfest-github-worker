@@ -71,7 +71,7 @@ class GithubRepoProperties(BaseModel):
 
 
 class TeamMember(BaseModel):
-    id: int
+    id: Optional[str] = None
     name: str
     username: Optional[str] = None
     email: Optional[str] = None
