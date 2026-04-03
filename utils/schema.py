@@ -58,8 +58,6 @@ class GithubInvitation(BaseModel):
     
 class GithubRepoProperties(BaseModel):
     toggle_visibility: bool = False
-    repo_owner: str
-    repo_name: str
     private: bool = True
     
     toggle_access: bool = False
@@ -80,7 +78,7 @@ class TeamMember(BaseModel):
 
 
 class TeamDetails(BaseModel):
-    team_id: Optional[str] = None
+    team_id: str
     team_no: int
     team_name: Optional[str] = None
     github_team: Optional[GithubTeam] = None

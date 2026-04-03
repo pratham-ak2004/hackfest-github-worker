@@ -51,7 +51,7 @@ class UpdateTeamTask(BaseEventTask):
             return False
         
     def process(self, event: TaskPayload) -> TaskResponse:
-        logger.info(f"Updating GitHub team for {self.payload.data.team_name}")
+        logger.info(f"Updating GitHub team for {self.payload.data.github_team.name}")
         
         github_team = orgClient.update_team_permissions(
             org=orgClient.org_name,
@@ -61,10 +61,10 @@ class UpdateTeamTask(BaseEventTask):
         )
         self.payload.data.github_team = github_team
         
-        logger.info(f"Successfully updated GitHub team: {self.payload.data.team_name}")
+        logger.info(f"Successfully updated GitHub team: {self.payload.data.github_team.name}")
         return TaskResponse(
             success=True,
-            message=f"GitHub team {self.payload.data.team_name} updated successfully.",
+            message=f"GitHub team {self.payload.data.github_team.name} updated successfully.",
             payload=self.payload.model_dump()
         )
         

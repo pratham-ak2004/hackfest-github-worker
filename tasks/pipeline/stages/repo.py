@@ -69,8 +69,8 @@ class UpdateRepoTask(BaseEventTask):
         logger.info(f"Updating GitHub repository properties for {self.payload.data.repo_name}")
         
         updatedRepo = orgClient.update_repo_visibility(
-            repo_name=self.payload.data.repo_name,
-            repo_owner=self.payload.data.repo_owner,
+            repo_name=self.payload.data.github_repo.name,
+            repo_owner=orgClient.org_name,
             private=self.payload.data.private
         )
         self.payload.data.github_repo = updatedRepo

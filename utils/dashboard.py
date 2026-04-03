@@ -244,8 +244,9 @@ class SyncManager:
         "synced_count": 0,
         "last_processed_id": 0,
         "errors": [],
-        "poll_interval": 30,  # seconds
+        "poll_interval": 15,  # seconds
     }
+    row_limit = 10
     sync_task_handle = None
     
     def __init__(self, db_manager: DatabaseManager | None = None, query_manager: QueryManager | None = None):
@@ -261,9 +262,11 @@ class SyncManager:
         route = route if route.startswith("/") else f"/{route}"
         headers = {
             "Content-Type": "application/json",
-            "X-Hackfest-Token": settings.HACKFEST_SECRET
+            "X-Hackfest-Secret": settings.HACKFEST_SECRET
         }
-        response = await requests.request(method, f"https://{settings.HACKFEST_URL}/api/worker{route}", headers=headers, json=payload)
+        response = requests.request(method, f"{settings.HACKFEST_URL}/api/dashboard/worker{route}", headers=headers, json=payload)
+        
+        print(response.text)
         return response
     
     async def save_github_team(self, data: CreateTeamTask.TaskPayload) -> None:
@@ -284,15 +287,12 @@ class SyncManager:
         })
         response.raise_for_status()
 
-    async def sync_to_user_db(self, task_row: dict[str, Any], decoded_result: dict[str, Any]) -> None:
+    async def sync_to_user_db(self, task_name: str, task_row: dict[str, Any], decoded_result: dict[str, Any]) -> bool:
         """
-            TODO: Implement your PUT logic to external user DB here.
-            
             Args:
                     task_row: Dict containing id, task_id, name, status, date_done, etc.
                     decoded_result: Dict with 'decoded' (the actual result) and 'format' (json/pickle/text)
         """
-        task_name = task_row.get("name", "")
         task_response = TaskResponse(**decoded_result.get("decoded", {}))
         
         try:
@@ -300,11 +300,16 @@ class SyncManager:
                 case CreateTeamTask.name:
                     payload = CreateTeamTask.TaskPayload(**task_response.payload)
                     await self.save_github_team(payload)
+                    return True
+
                 case CreateRepoTask.name:
                     payload = CreateRepoTask.TaskPayload(**task_response.payload)
                     await self.save_github_repo(payload)
+                    return True
+                
                 case _:
                     raise ValueError(f"No sync logic defined for task name: {task_name}")
+                
         except Exception as exc:
             error_msg = f"Error syncing task {task_row.get('task_id')}: {exc}"
             self.sync_state["errors"].append(
@@ -312,9 +317,12 @@ class SyncManager:
                 )
             if len(self.sync_state["errors"]) > 20:
                 self.sync_state["errors"] = self.sync_state["errors"][-20:]
+            return False
     
     async def sync_completed_tasks_loop(self) -> None:
         """Background loop that periodically syncs completed tasks to user DB"""
+        task_names = [CreateTeamTask.name, CreateRepoTask.name]
+        
         while self.sync_state["running"]:
             print("Sync loop tick: checking for completed tasks to sync...")
             try:
@@ -322,16 +330,13 @@ class SyncManager:
                     with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                         # Get tasks completed since last check
                         cursor.execute(
-                            """
+                            f"""
                             SELECT id, task_id, name, status, result, date_done
                             FROM celery_taskmeta
-                            WHERE status = 'SUCCESS'
-                            AND id > %s
-                            AND date_done IS NOT NULL
-                            ORDER BY id ASC
-                            LIMIT 100
-                            """,
-                            (self.sync_state["last_processed_id"],),
+                            WHERE status = 'SUCCESS' AND sync_status = FALSE
+                            ORDER BY date_done ASC, id ASC
+                            LIMIT {self.row_limit}
+                            """
                             )
                         
                         tasks = cursor.fetchall() or []
@@ -340,7 +345,27 @@ class SyncManager:
                             try:
                                 # Decode result and call user's sync function
                                 result_decoded = self.db_manager.decode_payload(task["result"])
-                                await self.sync_to_user_db(dict(task), result_decoded)														
+                                
+                                # skip tasks that are not in our tracked list to avoid unnecessary sync attempts
+                                if task["name"] not in task_names:
+                                    cursor.execute(
+                                        "UPDATE celery_taskmeta SET sync_status = TRUE WHERE id = %s",
+                                        (task["id"],)
+                                        )
+                                    conn.commit()
+                                    continue
+                                
+                                success = await self.sync_to_user_db(task["name"], dict(task), result_decoded)
+                                success = False
+                                if success:
+                                    cursor.execute(
+                                        "UPDATE celery_taskmeta SET sync_status = TRUE WHERE id = %s",
+                                        (task["id"],)
+                                        )
+                                    conn.commit()
+                                else:
+                                    raise ValueError(f"Sync function returned False for task {task['task_id']}")
+                                    
                                 self.sync_state["last_processed_id"] = task["id"]
                                 self.sync_state["synced_count"] += 1
                             except Exception as task_err:

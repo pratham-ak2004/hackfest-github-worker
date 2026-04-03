@@ -1,19 +1,22 @@
 import os
 
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import FileResponse
 from typing import Any
 from utils.dashboard import DatabaseManager, QueryManager, SyncManager
 from psycopg2.extras import RealDictCursor
+from config import settings
 
 class DashboardServer:
+    _secret_header_name = "X-Hackfest-Secret"
+    
     def __init__(self):
         self.app = FastAPI(
             title="Hackfest Celery Dashboard",
             description="A dashboard to monitor Celery task processing and sync status",
-            version="1.0.0",
+            version="1.1.0",
         )
         
         self.templates = Jinja2Templates(
@@ -26,16 +29,18 @@ class DashboardServer:
             query_manager=self.query_manager
             )
         
-        self.app.get("/")(self.dashboard_page)
-        self.app.get("/favicon.ico")(self.favicon)
-        self.app.get("/api/health")(self.health)
-        self.app.get("/api/stats")(self.get_stats)
-        self.app.get("/api/tasks")(self.list_tasks)
-        self.app.get("/api/tasks/{task_id}")(self.get_task)
-        self.app.get("/api/sync/status")(self.get_sync_status)
-        self.app.post("/api/sync/start")(self.start_sync_loop)
-        self.app.post("/api/sync/stop")(self.stop_sync_loop)
-        self.app.patch("/api/sync/config")(self.update_sync_config)
+        self.app.get("/api/stats", dependencies=[Depends(self.require_auth)])(self.get_stats)
+        self.app.get("/api/tasks", dependencies=[Depends(self.require_auth)])(self.list_tasks)
+        self.app.post("/api/sync/start", dependencies=[Depends(self.require_auth)])(self.start_sync_loop)
+        self.app.post("/api/sync/stop", dependencies=[Depends(self.require_auth)])(self.stop_sync_loop)
+        self.app.get("/api/sync/status", dependencies=[Depends(self.require_auth)])(self.get_sync_status)
+        
+    def require_auth(self, request: Request):
+        auth = request.headers.get(self._secret_header_name)
+        
+        if auth is not None and auth == settings.HACKFEST_SECRET:
+            return True
+        raise HTTPException(status_code=401, detail="Unauthorized")
         
     async def favicon(self):
         return FileResponse(os.path.join(os.path.dirname(__file__), "../templates/dashboard/favicon.ico"))
@@ -129,7 +134,7 @@ class DashboardServer:
     async def start_sync_loop(self):
         """Start the background sync loop"""
         if self.sync_manager.sync_state["running"]:
-            return {"status": "already_running", "message": "Sync is already running"}
+            return {"status": "running", "message": "Sync is already running"}
         
         await self.sync_manager.start_sync_loop()
         return {"status": "started", "message": "Sync loop started successfully"}
