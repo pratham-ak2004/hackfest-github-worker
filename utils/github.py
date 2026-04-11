@@ -209,26 +209,19 @@ class GithubClient:
             html_url=data["html_url"]
         )
         
-    def update_team_permissions(self, org: str, team_slug: str, permission: str, privacy: str) -> GithubTeam:
+    def update_team_permissions(self, org: str, team_slug: str, owner: str, repo: str, permission: str = "pull") -> bool:
         """Update the permissions of the specified team"""
         
         payload = {
             "permission": permission,
-            "privacy": privacy
         }
         headers = self._get_headers()
         
-        response = self._make_request(f"/orgs/{org}/teams/{team_slug}", HttpMethod.PATCH, headers, payload)
+        response = self._make_request(f"/orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}", HttpMethod.PUT, headers, payload)
         response.raise_for_status()
         data = response.json()
         
-        return GithubTeam(
-            id=data["id"],
-            name=data["name"],
-            slug=data["slug"],
-            url=data["url"],
-            html_url=data["html_url"]
-        )
+        return True
         
         
 orgClient = GithubClient(token=settings.GITHUB_ORG_TOKEN)
