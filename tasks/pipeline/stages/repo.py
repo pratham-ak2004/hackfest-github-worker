@@ -35,6 +35,7 @@ class CreateRepoTask(BaseEventTask):
             logger.debug(f"Scheduling invite task for member {member.name} of team {self.payload.data.team_name}")
             taskClient.create_invite_task(SendOrgInviteTask.TaskPayload.DataModel(
                 team=TeamDetails(
+                    team_id=self.payload.data.team_id,
                     team_no=self.payload.data.team_no,
                     team_name=self.payload.data.team_name,
                     github_team=self.payload.data.github_team,
@@ -66,7 +67,7 @@ class UpdateRepoTask(BaseEventTask):
             return False
         
     def process(self, event: TaskPayload) -> TaskResponse:
-        logger.info(f"Updating GitHub repository properties for {self.payload.data.repo_name}")
+        logger.info(f"Updating GitHub repository properties for {self.payload.data.github_repo.name}")
         
         updatedRepo = orgClient.update_repo_visibility(
             repo_name=self.payload.data.github_repo.name,
@@ -75,9 +76,9 @@ class UpdateRepoTask(BaseEventTask):
         )
         self.payload.data.github_repo = updatedRepo
         
-        logger.info(f"Successfully updated GitHub repository: {self.payload.data.repo_name}")
+        logger.info(f"Successfully updated GitHub repository: {self.payload.data.github_repo.name}")
         return TaskResponse(
             success=True,
-            message=f"GitHub repository {self.payload.data.repo_name} updated successfully.",
+            message=f"GitHub repository {self.payload.data.github_repo.name} updated successfully.",
             payload=self.payload.model_dump()
         )

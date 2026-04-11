@@ -356,7 +356,6 @@ class SyncManager:
                                     continue
                                 
                                 success = await self.sync_to_user_db(task["name"], dict(task), result_decoded)
-                                success = False
                                 if success:
                                     cursor.execute(
                                         "UPDATE celery_taskmeta SET sync_status = TRUE WHERE id = %s",

@@ -61,8 +61,9 @@ class GithubRepoProperties(BaseModel):
     private: bool = True
     
     toggle_access: bool = False
-    permission: str = "push" # pull, push, admin
-    privacy: str = "secret" # secret, closed
+    team_slug: str
+    repo: str
+    permission: str = "push" # pull, triage, push, maintain, admin
     
     github_repo: Optional[GithubRepository] = None
     github_team: Optional[GithubTeam] = None

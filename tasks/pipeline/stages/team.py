@@ -3,6 +3,7 @@ from utils.schema import Payload, TeamPayload, TaskResponse, GithubRepoPropertie
 from utils.github import orgClient
 from utils.tasks import taskClient
 from utils.logger import get_logger
+from config import settings
 
 logger = get_logger(__name__)
 
@@ -54,10 +55,11 @@ class UpdateTeamTask(BaseEventTask):
         logger.info(f"Updating GitHub team for {self.payload.data.github_team.name}")
         
         github_team = orgClient.update_team_permissions(
-            org=orgClient.org_name,
-            team_slug=self.payload.data.github_team.slug,
+            org=settings.GITHUB_ORG,
+            owner=settings.GITHUB_ORG,
+            team_slug=self.payload.data.team_slug,
             permission=self.payload.data.permission,
-            privacy=self.payload.data.privacy
+            repo=self.payload.data.repo
         )
         self.payload.data.github_team = github_team
         

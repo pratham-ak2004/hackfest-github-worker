@@ -58,7 +58,7 @@ class Settings:
     DASHBOARD_PORT = int(get_env.__func__("DASHBOARD_PORT", "8000"))
     
     APPLICATION_NAME = "hackfest-celery-worker"
-    GITHUB_ORG = "hackfest-dev"
+    GITHUB_ORG = get_env.__func__("GITHUB_ORG", "hackfest-dev")
     LOG_LEVEL = get_env.__func__("LOG_LEVEL", "INFO")
     EVENT_QUEUE = "celery"
     
