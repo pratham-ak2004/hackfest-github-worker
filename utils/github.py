@@ -219,7 +219,6 @@ class GithubClient:
         
         response = self._make_request(f"/orgs/{org}/teams/{team_slug}/repos/{owner}/{repo}", HttpMethod.PUT, headers, payload)
         response.raise_for_status()
-        data = response.json()
         
         return True
         
